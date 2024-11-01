@@ -20,11 +20,11 @@ static const char *TAG = "example";
 static led_strip_handle_t led_strip;
 
 static void configure_led(void) {
-  ESP_LOGI(TAG, "Example configured to blink addressable LED!");
+  ESP_LOGI(TAG, "Configured to control 20 addressable LEDs!");
   /* LED strip initialization with the GPIO and pixels number*/
   led_strip_config_t strip_config = {
       .strip_gpio_num = BLINK_GPIO,
-      .max_leds = 1, // at least one LED on board
+      .max_leds = 20, // Set the number of LEDs to 20
   };
   led_strip_rmt_config_t rmt_config = {
       .resolution_hz = 10 * 1000 * 1000, // 10MHz
@@ -38,7 +38,7 @@ static void configure_led(void) {
   };
   ESP_ERROR_CHECK(
       led_strip_new_spi_device(&strip_config, &spi_config, &led_strip));
-  /* Set all LED off to clear all pixels */
+  /* Set all LEDs off to clear all pixels */
   led_strip_clear(led_strip);
 }
 
@@ -66,9 +66,11 @@ esp_err_t get_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Function to set RGB color
+// Function to set RGB color on all LEDs
 void set_led_color(uint8_t red, uint8_t green, uint8_t blue) {
-  led_strip_set_pixel(led_strip, 0, red, green, blue);
+  for (int i = 0; i < 20; i++) { // Loop through all 20 LEDs
+    led_strip_set_pixel(led_strip, i, red, green, blue);
+  }
   led_strip_refresh(led_strip);
 }
 
