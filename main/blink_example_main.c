@@ -42,26 +42,50 @@ static void configure_led(void) {
   led_strip_clear(led_strip);
 }
 
-// HTTP GET handler for serving the HTML form
+// HTTP GET handler for serving the HTML form with AJAX
 esp_err_t get_handler(httpd_req_t *req) {
-  const char *response = "<!DOCTYPE html>"
-                         "<html>"
-                         "<body>"
-                         "<h2>RGB LED Control</h2>"
-                         "<form action=\"/set_color\" method=\"POST\">"
-                         "  <label for=\"red\">Red (0-255):</label><br>"
-                         "  <input type=\"number\" id=\"red\" name=\"red\" "
-                         "min=\"0\" max=\"255\"><br>"
-                         "  <label for=\"green\">Green (0-255):</label><br>"
-                         "  <input type=\"number\" id=\"green\" name=\"green\" "
-                         "min=\"0\" max=\"255\"><br>"
-                         "  <label for=\"blue\">Blue (0-255):</label><br>"
-                         "  <input type=\"number\" id=\"blue\" name=\"blue\" "
-                         "min=\"0\" max=\"255\"><br><br>"
-                         "  <input type=\"submit\" value=\"Set Color\">"
-                         "</form>"
-                         "</body>"
-                         "</html>";
+  const char *response =
+      "<!DOCTYPE html>"
+      "<html>"
+      "<body>"
+      "<h2>RGB LED Control</h2>"
+      "<form id=\"colorForm\">"
+      "  <label for=\"red\">Red (0-255):</label><br>"
+      "  <input type=\"number\" id=\"red\" name=\"red\" min=\"0\" "
+      "max=\"255\"><br>"
+      "  <label for=\"green\">Green (0-255):</label><br>"
+      "  <input type=\"number\" id=\"green\" name=\"green\" min=\"0\" "
+      "max=\"255\"><br>"
+      "  <label for=\"blue\">Blue (0-255):</label><br>"
+      "  <input type=\"number\" id=\"blue\" name=\"blue\" min=\"0\" "
+      "max=\"255\"><br><br>"
+      "  <input type=\"submit\" value=\"Set Color\">"
+      "</form>"
+      "<p id=\"status\"></p>"
+      "<script>"
+      "document.getElementById('colorForm').onsubmit = function(event) {"
+      "  event.preventDefault();" // Prevent default form submission
+      "  const red = document.getElementById('red').value;"
+      "  const green = document.getElementById('green').value;"
+      "  const blue = document.getElementById('blue').value;"
+      "  const params = `red=${red}&green=${green}&blue=${blue}`;"
+      "  fetch('/set_color', {"
+      "    method: 'POST',"
+      "    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },"
+      "    body: params"
+      "  })"
+      "  .then(response => response.text())"
+      "  .then(text => {"
+      "    document.getElementById('status').innerText = text;" // Display the
+                                                                // response
+      "  })"
+      "  .catch(error => {"
+      "    document.getElementById('status').innerText = 'Error: ' + error;"
+      "  });"
+      "};"
+      "</script>"
+      "</body>"
+      "</html>";
   httpd_resp_send(req, response, strlen(response));
   return ESP_OK;
 }
