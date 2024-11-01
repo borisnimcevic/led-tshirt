@@ -8,6 +8,7 @@
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include <stdio.h>
+#include "mdns.h" // Include the mDNS library
 
 #define EXAMPLE_ESP_WIFI_SSID "Disco_Shirt"
 #define EXAMPLE_MAX_STA_CONN 4
@@ -141,30 +142,38 @@ void start_webserver(void) {
 }
 
 void wifi_init_softap(void) {
-  ESP_ERROR_CHECK(nvs_flash_init());
-  ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  esp_netif_create_default_wifi_ap();
+    esp_netif_t *ap_netif = esp_netif_create_default_wifi_ap(); // Create the default AP netif
 
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  wifi_config_t wifi_config = {
-      .ap = {
-          .ssid = EXAMPLE_ESP_WIFI_SSID,
-          .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
-          .password = "",
-          .max_connection = EXAMPLE_MAX_STA_CONN,
-          .authmode = WIFI_AUTH_OPEN,
-      },
-  };
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid = EXAMPLE_ESP_WIFI_SSID,
+            .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
+            .password = "",
+            .max_connection = EXAMPLE_MAX_STA_CONN,
+            .authmode = WIFI_AUTH_OPEN,
+        },
+    };
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
-  ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
 
-  ESP_LOGI(TAG, "WiFi Access Point initialized. SSID:%s", EXAMPLE_ESP_WIFI_SSID);
+    // Set hostname
+    ESP_ERROR_CHECK(esp_netif_set_hostname(ap_netif, "party")); // Set hostname directly
+
+    // Initialize mDNS
+    ESP_ERROR_CHECK(mdns_init());
+    ESP_ERROR_CHECK(mdns_hostname_set("halloween"));
+    ESP_ERROR_CHECK(mdns_instance_name_set("ESP32 LED Control"));
+
+    ESP_LOGI(TAG, "WiFi Access Point initialized. SSID:%s", EXAMPLE_ESP_WIFI_SSID);
 }
 
 void app_main(void) {
