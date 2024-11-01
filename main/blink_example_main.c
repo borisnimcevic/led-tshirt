@@ -9,6 +9,7 @@
 #include "sdkconfig.h"
 #include <stdio.h>
 #include "mdns.h" // Include the mDNS library
+#include <stdlib.h> // For rand()
 
 #define EXAMPLE_ESP_WIFI_SSID "Disco_Shirt"
 #define EXAMPLE_MAX_STA_CONN 4
@@ -20,11 +21,26 @@ static led_strip_handle_t led_strip;
 static bool is_flashing = true; // To control flashing state
 static uint8_t current_red = 0, current_green = 0, current_blue = 0; // Store current color
 
+// Define the rainbow colors (RGB)
+static const uint8_t rainbow_colors[][3] = {
+    {255, 0, 0},   // Red
+    {255, 127, 0}, // Orange
+    {255, 255, 0}, // Yellow
+    {0, 255, 0},   // Green
+    {0, 0, 255},   // Blue
+    {75, 0, 130},  // Indigo
+    {148, 0, 211}  // Violet
+};
+
+#define RAINBOW_COLOR_COUNT (sizeof(rainbow_colors) / sizeof(rainbow_colors[0]))
+#define LED_COUNT 20 // Total number of LEDs
+#define FLASH_INTERVAL pdMS_TO_TICKS(250) // Flash interval
+
 static void configure_led(void) {
     ESP_LOGI(TAG, "Configured to control 20 addressable LEDs!");
     led_strip_config_t strip_config = {
         .strip_gpio_num = BLINK_GPIO,
-        .max_leds = 20,
+        .max_leds = LED_COUNT,
     };
     led_strip_rmt_config_t rmt_config = {
         .resolution_hz = 10 * 1000 * 1000,
@@ -35,7 +51,7 @@ static void configure_led(void) {
 }
 
 void set_led_color(uint8_t red, uint8_t green, uint8_t blue) {
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < LED_COUNT; i++) {
         led_strip_set_pixel(led_strip, i, red, green, blue);
     }
     led_strip_refresh(led_strip);
@@ -43,13 +59,39 @@ void set_led_color(uint8_t red, uint8_t green, uint8_t blue) {
 
 void rainbow_flash_task(void *pvParameter) {
     while (is_flashing) {
-        // Generate random color values for the LEDs (0-60)
-        uint8_t red = rand() % 61;   // Capped at 60
-        uint8_t green = rand() % 61; // Capped at 60
-        uint8_t blue = rand() % 61;  // Capped at 60
-        
-        set_led_color(red, green, blue);
-        vTaskDelay(pdMS_TO_TICKS(500)); // Flash every 500 ms
+        // Randomly determine how many LEDs to turn on (between 1 and LED_COUNT)
+        int num_leds_on = rand() % LED_COUNT + 1; // At least one LED on
+        int chosen_indices[LED_COUNT] = {0}; // To keep track of which LEDs are on
+
+        // Randomly choose LEDs to light up
+        for (int i = 0; i < num_leds_on; i++) {
+            int led_index;
+            do {
+                led_index = rand() % LED_COUNT;
+            } while (chosen_indices[led_index] == 1); // Avoid duplicates
+            chosen_indices[led_index] = 1; // Mark this LED as chosen
+
+            // Choose a random rainbow color
+            int color_index = rand() % RAINBOW_COLOR_COUNT;
+            uint8_t red = rainbow_colors[color_index][0];
+            uint8_t green = rainbow_colors[color_index][1];
+            uint8_t blue = rainbow_colors[color_index][2];
+
+            // Set the chosen LED to the selected rainbow color
+            led_strip_set_pixel(led_strip, led_index, red %40, green %40, blue %40);
+        }
+
+        // Refresh the LED strip to show changes
+        led_strip_refresh(led_strip);
+
+        // Turn off any LEDs that weren't chosen
+        for (int i = 0; i < LED_COUNT; i++) {
+            if (chosen_indices[i] == 0) {
+                led_strip_set_pixel(led_strip, i, 0, 0, 0); // Turn off the LED
+            }
+        }
+
+        vTaskDelay(FLASH_INTERVAL); // Flash every 500 ms
     }
     // Once finished, set to the last known color
     set_led_color(current_red, current_green, current_blue);
@@ -129,8 +171,8 @@ esp_err_t post_handler(httpd_req_t *req) {
         current_blue = (uint8_t)(blue > 60 ? 60 : blue);
         
         // Stop flashing and set the new color
-        is_flashing = false; // Stop the flashing task
-        set_led_color(current_red, current_green, current_blue); // Set the new color
+        is_flashing = false;
+        set_led_color(current_red, current_green, current_blue);
         ESP_LOGI(TAG, "Set color to R: %d, G: %d, B: %d", current_red, current_green, current_blue);
         httpd_resp_send(req, "Color updated", HTTPD_RESP_USE_STRLEN);
     } else {
