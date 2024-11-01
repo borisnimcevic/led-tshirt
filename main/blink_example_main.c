@@ -42,29 +42,35 @@ static void configure_led(void) {
   led_strip_clear(led_strip);
 }
 
-// HTTP GET handler for serving the HTML form with AJAX
 esp_err_t get_handler(httpd_req_t *req) {
   const char *response =
       "<!DOCTYPE html>"
       "<html>"
+      "<head>"
+      "<style>"
+      "body { font-family: Arial, sans-serif; font-size: 1.8em; }"
+      "h2 { font-size: 3em; }"
+      "label { display: block; margin-top: 20px; font-size: 2.2em; }"
+      "input[type='number'] { width: 150px; padding: 15px; font-size: 1.8em; }"
+      "input[type='submit'] { padding: 15px 30px; font-size: 2em; margin-top: 30px; }"
+      "#status { margin-top: 30px; font-size: 1.8em; color: green; }"
+      "</style>"
+      "</head>"
       "<body>"
       "<h2>RGB LED Control</h2>"
       "<form id=\"colorForm\">"
-      "  <label for=\"red\">Red (0-255):</label><br>"
-      "  <input type=\"number\" id=\"red\" name=\"red\" min=\"0\" "
-      "max=\"255\"><br>"
-      "  <label for=\"green\">Green (0-255):</label><br>"
-      "  <input type=\"number\" id=\"green\" name=\"green\" min=\"0\" "
-      "max=\"255\"><br>"
-      "  <label for=\"blue\">Blue (0-255):</label><br>"
-      "  <input type=\"number\" id=\"blue\" name=\"blue\" min=\"0\" "
-      "max=\"255\"><br><br>"
+      "  <label for=\"red\">Red (0-255):</label>"
+      "  <input type=\"number\" id=\"red\" name=\"red\" min=\"0\" max=\"255\">"
+      "  <label for=\"green\">Green (0-255):</label>"
+      "  <input type=\"number\" id=\"green\" name=\"green\" min=\"0\" max=\"255\">"
+      "  <label for=\"blue\">Blue (0-255):</label>"
+      "  <input type=\"number\" id=\"blue\" name=\"blue\" min=\"0\" max=\"255\">"
       "  <input type=\"submit\" value=\"Set Color\">"
       "</form>"
       "<p id=\"status\"></p>"
       "<script>"
       "document.getElementById('colorForm').onsubmit = function(event) {"
-      "  event.preventDefault();" // Prevent default form submission
+      "  event.preventDefault();"
       "  const red = document.getElementById('red').value;"
       "  const green = document.getElementById('green').value;"
       "  const blue = document.getElementById('blue').value;"
@@ -76,8 +82,7 @@ esp_err_t get_handler(httpd_req_t *req) {
       "  })"
       "  .then(response => response.text())"
       "  .then(text => {"
-      "    document.getElementById('status').innerText = text;" // Display the
-                                                                // response
+      "    document.getElementById('status').innerText = text;"
       "  })"
       "  .catch(error => {"
       "    document.getElementById('status').innerText = 'Error: ' + error;"
@@ -89,6 +94,9 @@ esp_err_t get_handler(httpd_req_t *req) {
   httpd_resp_send(req, response, strlen(response));
   return ESP_OK;
 }
+
+
+
 
 // Function to set RGB color on all LEDs
 void set_led_color(uint8_t red, uint8_t green, uint8_t blue) {
